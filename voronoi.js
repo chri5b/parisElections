@@ -1,71 +1,133 @@
-var width = 600,
+
+
+$(document).ready(function(){
+    var selector = $("#electionSelector");
+    var cand1Selector = $("#candidate1Selector");
+    var cand2Selector = $("#candidate2Selector");
+
+    selector.change(function() {
+        var selectedElection = parseInt(this.value);
+        cand1Selector.find('option').remove();
+        cand2Selector.find('option').remove();
+        $.each(candidates, function(index,candidate) {
+            if(candidate.ElectionID == selectedElection) {
+                cand1Selector.append(
+                    $('<option></option>').val(candidate.CandidateID).html(candidate.FirstName + ' ' + candidate.LastName)
+                );
+                cand2Selector.append(
+                    $('<option></option>').val(candidate.CandidateID).html(candidate.FirstName + ' ' + candidate.LastName)
+                );
+            }
+        });   
+        $('#candidate1Selector :nth-child(1)').attr('selected', 'selected');
+        $('#candidate2Selector :nth-child(2)').attr('selected', 'selected');
+        redraw()
+    });    
+    
+    cand1Selector.change(function () {
+        redraw();
+    });
+    
+    cand2Selector.change(function () {
+        redraw();
+    });
+
+    $.each(elections, function(index, election) {
+        selector.append(
+            $('<option></option>').val(election.ElectionID).html(election.Name + " : Tour " + election.Round)
+        );   
+    });
+    selector.change();
+    
+    var width = 600,
     height = 500;
+    
+    redraw();
 
-var latlong = [];
+    function redraw() {
+        var electionID = parseInt(selector.val());
+        var candidateID1 = parseInt(cand1Selector.val());
+        var candidateID2 = parseInt(cand2Selector.val());
 
-var latMax = d3.max(addresses.map(function(d) { return d.lat; } ));
-var latMin = d3.min(addresses.map(function(d) { return d.lat; } ));
+        var emptyArray = [];
 
-var longMax = d3.max(addresses.map(function(d) { return d.lng; } ));
-var longMin = d3.min(addresses.map(function(d) { return d.lng; } )); 
+        var results = mapreduce(votes,mapFunction,reduceFunction);
 
-var latScale = d3.scale.linear().domain([latMin,latMax]).range([0+10,width-10]);
-var longScale = d3.scale.linear().domain([longMin,longMax]).range([0+10,height-10]);
+        function mapFunction(item,emit) {
+            if (item.EId == electionID && (item.CId == candidateID1 || item.CId == candidateID2)) {
+                emit(item.A + "_" + item.BdV, item);
+            }
+        }
 
-var uniqueAddresses = addresses.filter(function(itm,i,a) {
-    var firstInstanceOfItem = -1;
-    for (var j = 0; j < a.length ; j++) {
-        if (a[j].address == itm.address) {
-            firstInstanceOfItem = j;
-            break;
+        function reduceFunction(key, values, emit) {
+            var newItem = {};
+            for (var i = 0 ; i < values.length ; i++) {
+                if (values[i].CId == candidateID1) { newItem.C1Votes = values[i].Vs; }
+                if (values[i].CId == candidateID2) { newItem.C2Votes = values[i].Vs; }
+                newItem.BdV = key;
+                newItem.V = values[i].V;
+            }
+            newItem.difference =  newItem.C1Votes - newItem.C2Votes;
+            newItem.relativeDifference = newItem.difference/newItem.V;
+            
+            emit({key:key, result:newItem });
+        }
+
+        var maxDifference = d3.max(results.map(function(d) { return d.result.relativeDifference; } ));
+        var minDifference = d3.min(results.map(function(d) { return d.result.relativeDifference; } ));
+        var maxVoters = d3.max(results.map(function(d) { return d.result.V; } ));
+
+        var color = d3.scale.linear().domain([minDifference,0,maxDifference]).range(["red","grey","blue"]);
+        var area = d3.scale.linear().domain([0,maxVoters]).range([0,200]);
+
+        var mapOptions = {
+            center: new google.maps.LatLng(48.8667617, 2.3327802),
+            zoom: 13,
+            mapTypeId: google.maps.MapTypeId.ROADMAP
+        };
+                
+        var map = new google.maps.Map(document.getElementById("map_canvas"), mapOptions);
+
+        for (var i = 0 ; i < bureaux.length; i++) {
+            var populationOptions = {
+                center: new google.maps.LatLng(bureaux[i].Lat,bureaux[i].Lng),
+                strokeColor:getColor(bureaux[i]),
+                strokeOpacity :0.5,
+                strokeWeight :1,
+                fillColor :getColor(bureaux[i]),
+                fillOpacity : 0.3,
+                map :map,
+                radius: getSize(bureaux[i])
+            };
+            cityCircle = new google.maps.Circle(populationOptions);
+            var listener = google.maps.event.addListener(cityCircle, "mouseover", function () { console.log(bureaux[i]); });
+        }
+
+        function getColor(bureau) {
+            var Arrondissement_BureauNumber = bureau.ARR_NUM_BUR;
+            var resultForThisBureauAndElection = results.filter(function(element) {
+                return element.key == Arrondissement_BureauNumber;
+            });
+            return color(resultForThisBureauAndElection[0].result.relativeDifference);  
+        }
+
+        function getSize(bureau) {
+            var Arrondissement_BureauNumber = bureau.ARR_NUM_BUR;
+            var resultForThisBureauAndElection = results.filter(function(element) {
+                return element.key == Arrondissement_BureauNumber;
+            });
+            return area(resultForThisBureauAndElection[0].result.V);
+        }
+
+        function getOpacity(bureau) {
+            var Arrondissement_BureauNumber = bureau.ARR_NUM_BUR;
+            var resultForThisBureauAndElection = results.filter(function(element) {
+                return element.key == Arrondissement_BureauNumber;
+            });
+            return Math.abs(resultForThisBureauAndElection[0].result.relativeDifference);
         }
     }
-    return i==firstInstanceOfItem;  
+    
 });
 
 
-
-
-for (var i = 0 ; i < uniqueAddresses.length; i++) {
-    var item = {};
-    item[0] = latScale(uniqueAddresses[i].lat);
-    item[1] = longScale(uniqueAddresses[i].lng);
-    console.log(i + " : " + item[1]);
-    latlong.push(item);
-}
-
-
-
-console.log(latlong);
-console.log(d3.geom.voronoi(latlong));
-
-//Need to work out how to scale it correctly so that everything is not off the scale.
-
-
-var svg = d3.select("#chart")
-  .append("svg")
-    .attr("width", width)
-    .attr("height", height)
-    .attr("class", "PiYG")
-    .on("mousemove", update);
-
-svg.selectAll("path")
-    .data(d3.geom.voronoi(latlong))
-  .enter().append("path")
-    .attr("class", function(d, i) { return i ? "q" + (i % 9) + "-9" : null; })
-    .attr("d", function(d) { return "M" + d.join("L") + "Z"; });
-
-svg.selectAll("circle")
-    .data(latlong.slice(1))
-  .enter().append("circle")
-    .attr("transform", function(d) { return "translate(" + d[0] + "," + d[1] + ")"; })
-    .attr("r", 2);
-
-function update() {
-  latlong[0] = d3.mouse(this);
-  svg.selectAll("path")
-      .data(d3.geom.voronoi(latlong)
-      .map(function(d) { return "M" + d.join("L") + "Z"; }))
-      .filter(function(d) { return this.getAttribute("d") != d; })
-      .attr("d", function(d) { return d; });
-}
