@@ -39,8 +39,8 @@ $(document).ready(function(){
     });
     selector.change();
     
-    var width = 600,
-    height = 500;
+    var width = 800,
+    height = 600;
     
     redraw();
 
@@ -51,15 +51,27 @@ $(document).ready(function(){
 
         var emptyArray = [];
 
-        var results = mapreduce(votes,mapFunction,reduceFunction);
-
+        
+        var resultArray = mapreduce(votes,mapFunction,reduceFunction);
+        //console.log(resultArray);
+        
+        //put results into an object to make looking up an individual item quicker
+        resultObj = {};
+        resultArray.forEach(function(item,array) {
+            resultObj[item.key] = item.result;
+        });
+        
+        //console.log(resultObj);
+        
         function mapFunction(item,emit) {
+            //Filters out all the unneeded elections and candidates and emits the necessary info with a key for the polling station
             if (item.EId == electionID && (item.CId == candidateID1 || item.CId == candidateID2)) {
                 emit(item.A + "_" + item.BdV, item);
             }
         }
 
         function reduceFunction(key, values, emit) {
+            //Collates the two results (one for each candidate) for each polling station into a single record for the polling station.
             var newItem = {};
             for (var i = 0 ; i < values.length ; i++) {
                 if (values[i].CId == candidateID1) { newItem.C1Votes = values[i].Vs; }
@@ -73,11 +85,11 @@ $(document).ready(function(){
             emit({key:key, result:newItem });
         }
 
-        var maxDifference = d3.max(results.map(function(d) { return d.result.relativeDifference; } ));
-        var minDifference = d3.min(results.map(function(d) { return d.result.relativeDifference; } ));
-        var maxVoters = d3.max(results.map(function(d) { return d.result.V; } ));
+        var maxDifference = d3.max(resultArray.map(function(d) { return d.result.relativeDifference; } ));
+        var minDifference = d3.min(resultArray.map(function(d) { return d.result.relativeDifference; } ));
+        var maxVoters = d3.max(resultArray.map(function(d) { return d.result.C1Votes + d.result.C2Votes; } ));
 
-        var color = d3.scale.linear().domain([minDifference,0,maxDifference]).range(["red","grey","blue"]);
+        var color = d3.scale.linear().domain([minDifference,0,maxDifference]).range(["blue","grey","red"]);
         var area = d3.scale.linear().domain([0,maxVoters]).range([0,200]);
 
         var mapOptions = {
@@ -92,31 +104,36 @@ $(document).ready(function(){
             var populationOptions = {
                 center: new google.maps.LatLng(bureaux[i].Lat,bureaux[i].Lng),
                 strokeColor:getColor(bureaux[i]),
-                strokeOpacity :0.5,
+                strokeOpacity :1,
                 strokeWeight :1,
                 fillColor :getColor(bureaux[i]),
-                fillOpacity : 0.3,
+                fillOpacity : 0.7,
                 map :map,
                 radius: getSize(bureaux[i])
             };
             cityCircle = new google.maps.Circle(populationOptions);
-            var listener = google.maps.event.addListener(cityCircle, "mouseover", function () { console.log(bureaux[i]); });
+            var listener = google.maps.event.addListener(cityCircle, "mouseover", function () { 
+
+                var Lat = this.center.Ya;
+                var Lng = this.center.Za;
+                matchingItem = bureaux.filter(function(item,array) {
+                    return (Math.abs((parseFloat(item.Lat) - Lat)) < 0.0001) && Math.abs((parseFloat(item.Lng) - Lng) < 0.0001);
+                });
+                var voteData = resultObj[matchingItem[0].ARR_NUM_BUR];
+                var voteDataDescription = $("#candidate1Selector option:selected").text() + " " + voteData.C1Votes + " votes ; " + $("#candidate2Selector option:selected").text() + " " + voteData.C2Votes;
+                $("#popup").html("<div>" + matchingItem[0].NOM_BUREAU + " : " + matchingItem[0].ADRESSE_COMPLETE + "</div>" + "<div>" + voteDataDescription + "</div>");
+                console.log(matchingItem);
+            });
         }
 
         function getColor(bureau) {
             var Arrondissement_BureauNumber = bureau.ARR_NUM_BUR;
-            var resultForThisBureauAndElection = results.filter(function(element) {
-                return element.key == Arrondissement_BureauNumber;
-            });
-            return color(resultForThisBureauAndElection[0].result.relativeDifference);  
+            return color(resultObj[Arrondissement_BureauNumber].relativeDifference);  
         }
 
         function getSize(bureau) {
             var Arrondissement_BureauNumber = bureau.ARR_NUM_BUR;
-            var resultForThisBureauAndElection = results.filter(function(element) {
-                return element.key == Arrondissement_BureauNumber;
-            });
-            return area(resultForThisBureauAndElection[0].result.V);
+            return area(resultObj[Arrondissement_BureauNumber].C1Votes + resultObj[Arrondissement_BureauNumber].C2Votes);
         }
 
         function getOpacity(bureau) {
