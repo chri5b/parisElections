@@ -1,6 +1,30 @@
 
 
 $(document).ready(function(){
+    var infowindow;
+    (function () {
+
+      google.maps.Map.prototype.markers = new Array();
+        
+      google.maps.Map.prototype.addMarker = function(marker) {
+        this.markers[this.markers.length] = marker;
+      };
+        
+      google.maps.Map.prototype.getMarkers = function() {
+        return this.markers
+      };
+        
+      google.maps.Map.prototype.clearMarkers = function() {
+        if(infowindow) {
+          infowindow.close();
+        }
+        
+        for(var i=0; i<this.markers.length; i++){
+          this.markers[i].setMap(null);
+        }
+      };
+    })();
+
     var selector = $("#electionSelector");
     var cand1Selector = $("#candidate1Selector");
     var cand2Selector = $("#candidate2Selector");
@@ -90,7 +114,7 @@ $(document).ready(function(){
         var maxVoters = d3.max(resultArray.map(function(d) { return d.result.C1Votes + d.result.C2Votes; } ));
 
         var color = d3.scale.linear().domain([minDifference,0,maxDifference]).range(["blue","grey","red"]);
-        var area = d3.scale.linear().domain([0,maxVoters]).range([0,200]);
+        var area = d3.scale.linear().domain([0,maxVoters]).range([0,50000]);
 
         var mapOptions = {
             center: new google.maps.LatLng(48.8667617, 2.3327802),
@@ -107,25 +131,51 @@ $(document).ready(function(){
                 strokeOpacity :1,
                 strokeWeight :1,
                 fillColor :getColor(bureaux[i]),
-                fillOpacity : 0.7,
+                fillOpacity : 0.5,
                 map :map,
                 radius: getSize(bureaux[i])
             };
             cityCircle = new google.maps.Circle(populationOptions);
-            var listener = google.maps.event.addListener(cityCircle, "mouseover", function () { 
-
-                var Lat = this.center.Ya;
-                var Lng = this.center.Za;
-                matchingItem = bureaux.filter(function(item,array) {
-                    return (Math.abs((parseFloat(item.Lat) - Lat)) < 0.0001) && Math.abs((parseFloat(item.Lng) - Lng) < 0.0001);
-                });
-                var voteData = resultObj[matchingItem[0].ARR_NUM_BUR];
-                var voteDataDescription = $("#candidate1Selector option:selected").text() + " " + voteData.C1Votes + " votes ; " + $("#candidate2Selector option:selected").text() + " " + voteData.C2Votes;
-                $("#popup").html("<div>" + matchingItem[0].NOM_BUREAU + " : " + matchingItem[0].ADRESSE_COMPLETE + "</div>" + "<div>" + voteDataDescription + "</div>");
-                console.log(matchingItem);
+            var mouseOutListener = google.maps.event.addListener(cityCircle, "mouseout", function (event) {
+                map.clearMarkers();
             });
+            
+            var mouseOverListener = google.maps.event.addListener(cityCircle, "mouseover", function (event) { 
+                console.log(event);
+                
+                var Lat = event.latLng.Ya;
+                var Lng = event.latLng.Za;
+                
+                matchingItem = bureaux.filter(function(item,array) {
+                    return (Math.abs((parseFloat(item.Lat) - Lat)) < 0.0005) && Math.abs((parseFloat(item.Lng) - Lng) < 0.0005);
+                });
+                console.log("number of matches: " + matchingItem.length);
+                matchingItem.sort(function(a,b) {
+                    var aDeviation = Math.abs((parseFloat(a.Lat) - Lat)) + Math.abs((parseFloat(a.Lng) - Lng));
+                    var bDeviation = Math.abs((parseFloat(b.Lat) - Lat)) + Math.abs((parseFloat(b.Lng) - Lng));
+                
+                    return aDeviation - bDeviation;
+                });
+                if (matchingItem.length > 0) {
+                    var voteData = resultObj[matchingItem[0].ARR_NUM_BUR];
+                    var voteDataDescription = "<div>" + $("#candidate1Selector option:selected").text() + " " + voteData.C1Votes + " votes</div><div>" + $("#candidate2Selector option:selected").text() + " " + voteData.C2Votes + " votes</div>";
+                    var voteDataLocation = "<div>" + matchingItem[0].NOM_BUREAU + "</div><div>" + matchingItem[0].ADRESSE_COMPLETE + "</div>";
+                    
+                    map.addMarker(createMarker(matchingItem[0].NOM_BUREAU,event.latLng,voteDataLocation + voteDataDescription));
+                }
+            });
+            
+            function createMarker(name, latlng, content) {
+                var marker = new google.maps.Marker({position: latlng, map: map, title:name});
+                if (infowindow) infowindow.close();
+                infowindow = new google.maps.InfoWindow({content: content});
+                infowindow.open(map, marker);
+                return marker;
+            }            
         }
 
+
+        
         function getColor(bureau) {
             var Arrondissement_BureauNumber = bureau.ARR_NUM_BUR;
             return color(resultObj[Arrondissement_BureauNumber].relativeDifference);  
@@ -133,7 +183,7 @@ $(document).ready(function(){
 
         function getSize(bureau) {
             var Arrondissement_BureauNumber = bureau.ARR_NUM_BUR;
-            return area(resultObj[Arrondissement_BureauNumber].C1Votes + resultObj[Arrondissement_BureauNumber].C2Votes);
+            return Math.sqrt(area(resultObj[Arrondissement_BureauNumber].C1Votes + resultObj[Arrondissement_BureauNumber].C2Votes));
         }
 
         function getOpacity(bureau) {
