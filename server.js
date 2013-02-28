@@ -1,6 +1,7 @@
 var http = require('http');
 var fs = require('fs');
 var path = require('path');
+var electionData = require('./electionData');
  
 http.createServer(function (request, response) {
  
@@ -9,6 +10,10 @@ http.createServer(function (request, response) {
     var filePath = '.' + request.url;
     if (filePath == './')
         filePath = './index.htm';
+    if (filePath.indexOf('./getElectionData?') != -1)
+    {
+        electionData.getElectionData(request,response);
+    }
          
     var extname = path.extname(filePath);
     var contentType = 'text/html';

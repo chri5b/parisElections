@@ -73,41 +73,8 @@ $(document).ready(function(){
         var candidateID1 = parseInt(cand1Selector.val());
         var candidateID2 = parseInt(cand2Selector.val());
 
-        var emptyArray = [];
+        //Call the new webservice
 
-        
-        var resultArray = mapreduce(votes,mapFunction,reduceFunction);
-        //console.log(resultArray);
-        
-        //put results into an object to make looking up an individual item quicker
-        resultObj = {};
-        resultArray.forEach(function(item,array) {
-            resultObj[item.key] = item.result;
-        });
-        
-        //console.log(resultObj);
-        
-        function mapFunction(item,emit) {
-            //Filters out all the unneeded elections and candidates and emits the necessary info with a key for the polling station
-            if (item.EId == electionID && (item.CId == candidateID1 || item.CId == candidateID2)) {
-                emit(item.A + "_" + item.BdV, item);
-            }
-        }
-
-        function reduceFunction(key, values, emit) {
-            //Collates the two results (one for each candidate) for each polling station into a single record for the polling station.
-            var newItem = {};
-            for (var i = 0 ; i < values.length ; i++) {
-                if (values[i].CId == candidateID1) { newItem.C1Votes = values[i].Vs; }
-                if (values[i].CId == candidateID2) { newItem.C2Votes = values[i].Vs; }
-                newItem.BdV = key;
-                newItem.V = values[i].V;
-            }
-            newItem.difference =  newItem.C1Votes - newItem.C2Votes;
-            newItem.relativeDifference = newItem.difference/newItem.V;
-            
-            emit({key:key, result:newItem });
-        }
 
         var maxDifference = d3.max(resultArray.map(function(d) { return d.result.relativeDifference; } ));
         var minDifference = d3.min(resultArray.map(function(d) { return d.result.relativeDifference; } ));

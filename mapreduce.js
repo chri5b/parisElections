@@ -23,3 +23,4 @@ var mapreduce = function (data, map, reduce) {
 	
 	return reduceResult;
 };
+exports.mapreduce = mapreduce;
