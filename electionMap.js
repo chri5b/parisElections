@@ -1,33 +1,15 @@
 
 
 $(document).ready(function(){
-    var infowindow;
-    (function () {
-
-      google.maps.Map.prototype.markers = new Array();
-        
-      google.maps.Map.prototype.addMarker = function(marker) {
-        this.markers[this.markers.length] = marker;
-      };
-        
-      google.maps.Map.prototype.getMarkers = function() {
-        return this.markers
-      };
-        
-      google.maps.Map.prototype.clearMarkers = function() {
-        if(infowindow) {
-          infowindow.close();
-        }
-        
-        for(var i=0; i<this.markers.length; i++){
-          this.markers[i].setMap(null);
-        }
-      };
-    })();
 
     var selector = $("#electionSelector");
     var cand1Selector = $("#candidate1Selector");
     var cand2Selector = $("#candidate2Selector");
+    var map = L.map('map_canvas').setView([48.86,2.3470], 12);
+    L.tileLayer('http://{s}.tile.cloudmade.com/d08561533a204a4c8a4c8dceb5d94bc4/997/256/{z}/{x}/{y}.png', {
+        attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://cloudmade.com">CloudMade</a>',
+        maxZoom: 18
+    }).addTo(map);
 
     selector.change(function() {
         var selectedElection = parseInt(this.value);
@@ -82,7 +64,8 @@ $(document).ready(function(){
                candidateB:candidateID2
            }
         }).success(function(data,textStatus,jqXHR) {
-            var resultArray = JSON.parse(data);
+            var resultArray = [];
+            resultArray = JSON.parse(data);
             console.log(typeof(resultArray));
 
                 //put results into an object to make looking up an individual item quicker
@@ -95,65 +78,23 @@ $(document).ready(function(){
                 var minDifference = d3.min(resultArray.map(function(d) { return d.result.relativeDifference; } ));
                 var maxVoters = d3.max(resultArray.map(function(d) { return d.result.C1Votes + d.result.C2Votes; } ));
 
-                var color = d3.scale.linear().domain([minDifference,0,maxDifference]).range(["blue","grey","red"]);
+                var color = d3.scale.linear().domain([minDifference,0,maxDifference]).range(["#00f","#333","#f00"]);
                 var area = d3.scale.linear().domain([0,maxVoters]).range([0,50000]);
 
-                var mapOptions = {
-                    center: new google.maps.LatLng(48.8667617, 2.3327802),
-                    zoom: 12,
-                    mapTypeId: google.maps.MapTypeId.ROADMAP
-                };
 
-                var map = new google.maps.Map(document.getElementById("map_canvas"), mapOptions);
+
+
 
                 for (var i = 0 ; i < bureaux.length; i++) {
-                    var populationOptions = {
-                        center: new google.maps.LatLng(bureaux[i].Lat,bureaux[i].Lng),
-                        strokeColor:getColor(bureaux[i],resultObj,color),
-                        strokeOpacity :1,
-                        strokeWeight :1,
-                        fillColor :getColor(bureaux[i],resultObj,color),
-                        fillOpacity : 0.5,
-                        map :map,
-                        radius: getSize(bureaux[i],resultObj,area)
-                    };
-                    cityCircle = new google.maps.Circle(populationOptions);
-                    var mouseOutListener = google.maps.event.addListener(cityCircle, "mouseout", function (event) {
-                        map.clearMarkers();
-                    });
 
-                    var mouseOverListener = google.maps.event.addListener(cityCircle, "mouseover", function (event) {
-                        console.log(event);
-
-                        var Lat = event.latLng.Ya;
-                        var Lng = event.latLng.Za;
-
-                        matchingItem = bureaux.filter(function(item,array) {
-                            return (Math.abs((parseFloat(item.Lat) - Lat)) < 0.0005) && Math.abs((parseFloat(item.Lng) - Lng) < 0.0005);
-                        });
-                        console.log("number of matches: " + matchingItem.length);
-                        matchingItem.sort(function(a,b) {
-                            var aDeviation = Math.abs((parseFloat(a.Lat) - Lat)) + Math.abs((parseFloat(a.Lng) - Lng));
-                            var bDeviation = Math.abs((parseFloat(b.Lat) - Lat)) + Math.abs((parseFloat(b.Lng) - Lng));
-
-                            return aDeviation - bDeviation;
-                        });
-                        if (matchingItem.length > 0) {
-                            var voteData = resultArray[matchingItem[0].ARR_NUM_BUR];
-                            var voteDataDescription = "<div>" + $("#candidate1Selector option:selected").text() + " " + voteData.C1Votes + " votes</div><div>" + $("#candidate2Selector option:selected").text() + " " + voteData.C2Votes + " votes</div>";
-                            var voteDataLocation = "<div>" + matchingItem[0].NOM_BUREAU + "</div><div>" + matchingItem[0].ADRESSE_COMPLETE + "</div>";
-
-                            map.addMarker(createMarker(matchingItem[0].NOM_BUREAU,event.latLng,voteDataLocation + voteDataDescription));
-                        }
-                    });
-
-                    function createMarker(name, latlng, content) {
-                        var marker = new google.maps.Marker({position: latlng, map: map, title:name});
-                        if (infowindow) infowindow.close();
-                        infowindow = new google.maps.InfoWindow({content: content});
-                        infowindow.open(map, marker);
-                        return marker;
-                    }
+                    var circle = L.circle([bureaux[i].Lat,bureaux[i].Lng], getSize(bureaux[i],resultObj,area), {
+                        color: getColor(bureaux[i],resultObj,color),
+                        opacity: 0.2,
+                        fillColor: getColor(bureaux[i],resultObj,color),
+                        fillOpacity: getOpacity(bureaux[i],resultArray),
+                        weight: 1
+                    }).addTo(map);
+                    //plot the bureau
 
                     function getColor(bureau,resultArray,color) {
                         var Arrondissement_BureauNumber = bureau.ARR_NUM_BUR;
@@ -168,7 +109,7 @@ $(document).ready(function(){
 
                     function getOpacity(bureau,resultArray) {
                         var Arrondissement_BureauNumber = bureau.ARR_NUM_BUR;
-                        var resultForThisBureauAndElection = results.filter(function(element) {
+                        var resultForThisBureauAndElection = resultArray.filter(function(element) {
                             return element.key == Arrondissement_BureauNumber;
                         });
                         return Math.abs(resultForThisBureauAndElection[0].result.relativeDifference);
