@@ -3,28 +3,27 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
     <title>French Presidential Election Results - Paris</title>
+    <link type="text/css" rel="stylesheet" href="voronoi.css"/>
     <script type="text/javascript" src="d3.v2.js"></script>
-    <script type="text/javascript" src="mapreduce.js"></script>
     <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.js"></script>
     <script type="text/javascript"
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBBVNw3AvhoSwNMzQNJ0KgLSobAqrCPl74&sensor=false">
     </script>
-    <link type="text/css" rel="stylesheet" href="voronoi.css"/>
+      
   </head>
   <body>
     <span>Election: </span>
     <select id="electionSelector"></select>
-    <span>Candidat Rouge: </span>
+    <span>Red candidate: </span>
     <select id="candidate1Selector"></select>
-    <span>Candidat Bleu: </span>
+    <span>Blue candidate: </span>
     <select id="candidate2Selector"></select>
     <p></p>
     <div id="popup"></div>
-    <div id="map_canvas" style="width:1200px; height:800px;"></div>
+    <div id="map_canvas" style="width:800px; height:600px;"></div>
     <script type="text/javascript" src="elections.js"></script>
     <script type="text/javascript" src="bureaux.js"></script>
     <script type="text/javascript" src="candidates.js"></script>
-    <script type="text/javascript" src="votes.js"></script>
-    <script type="text/javascript" src="voronoi.js"></script>
+    <script type="text/javascript" src="electionMap.js"></script>
   </body>
 </html>

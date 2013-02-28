@@ -1,6 +1,3 @@
-var bureaux = require("./bureaux");
-var candidates = require("./candidates");
-var elections = require("./elections");
 var votes = require("./votes");
 var mapreduce = require("./mapreduce");
 var url = require("url");
@@ -14,15 +11,9 @@ function getElectionData(request,response) {
     var candidateA = thisQuery.candidateA;
     var candidateB = thisQuery.candidateB;
 
-    console.log(votes.votes[0]);
+    //console.log(votes.votes[0]);
     var resultArray = mapreduce.mapreduce(votes.votes,mapFunction,reduceFunction);
-    console.log(resultArray[0]);
-
-    //put results into an object to make looking up an individual item quicker
-    resultObj = {};
-    resultArray.forEach(function(item,array) {
-        resultObj[item.key] = item.result;
-    });
+    //console.log(resultArray[0]);
 
     response.writeHead(200,{"Content-Type":"text/plain"});
     response.write(JSON.stringify(resultArray,null,true));

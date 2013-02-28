@@ -12,4 +12,3 @@ var candidates = [
     ,{'ElectionID':1,'CandidateID':9,'FirstName':'Nicolas','LastName':'Dupont Aignan'}
     ,{'ElectionID':1,'CandidateID':10,'FirstName':'Fran&ccedil;ois','LastName':'Hollande'}
 ];
-exports.candidates = candidates;
