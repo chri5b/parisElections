@@ -3,26 +3,59 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
     <title>French Presidential Election Results - Paris</title>
-    <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.5/leaflet.css" />
+
+    <link rel="stylesheet" href="bootstrap.min.css" />
+      <link rel="stylesheet" href="leaflet.css" />
     <!--[if lte IE 8]>
       <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.5/leaflet.ie.css" />
     <![endif]-->
-      <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.js"></script>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.js"></script>
     <script type="text/javascript" src="d3.v2.js"></script>
-    <script src="http://cdn.leafletjs.com/leaflet-0.5/leaflet.js"></script>
-
-      
+    <script type="text/javascript" src="leaflet.js"></script>
+    <script type="text/javascript" src="bootstrap-collapse.min.js"></script>
+    <script type="text/javascript" src="bootstrap-transition.min.js"></script>
   </head>
   <body>
-    <span>Election: </span>
-    <select id="electionSelector"></select>
-    <span>Red candidate: </span>
-    <select id="candidate1Selector"></select>
-    <span>Blue candidate: </span>
-    <select id="candidate2Selector"></select>
-    <p></p>
-    <div id="popup"></div>
-    <div id="map_canvas" style="height:600px;"></div>
+    <div class="container-fluid">
+        <div class="row-fluid" style="padding:20px;">
+            <div class="span10">
+                <h1>Paris 2012 Election Results</h1>
+            </div>
+            <div class="span2"></div><button type="button" class="btn btn-info" data-toggle="collapse" data-target="#collapser">More Info</button></h1></div>
+        </div>
+        <div class="row-fluid collapse" id="collapser">
+            <div class="span6 offset1 well" >
+                <p>
+                    Where did each candidate in the 2012 French presidential elections perform best in Paris?
+                </p>
+                <p>
+                    Using the detailed voting station data published as part of the <a href="http://www.data.gouv.fr">Open Data</a> initiative by the French Government, this map plots a circle for each voting station in Paris. The colour indicates which of the two candidates selected had the most votes. Size of the circle indicates the total number of voters for both candidates and is scaled to the maximum number of votes for both candidates recieved.
+                </p>
+                <p>
+                    Implementation uses map data from <a href="http://www.cloudmade.com">cloudmade</a>, and uses <a href="http://leafletjs.com">leaflet.js</a> for the map UI. <a href="http://nodejs.com">Node</a> does the datamangling. Geocoded information for each of the Paris voting stations can be found <a href="bureaux.js">here</a></p>
+                <p>
+                </p>
+            </div>
+        </div>
+        <div class="row-fluid">
+            <div class="span10 offset1">
+                <span>Election: </span>
+                <select id="electionSelector"></select>
+                <span>Red candidate: </span>
+                <select id="candidate1Selector"></select>
+                <span>Blue candidate: </span>
+                <select id="candidate2Selector"></select>
+            </div>
+        </div>
+        <div class="row-fluid">
+            <div class="span10 offset1">
+                <div id="popup"></div>
+                <div id="map_canvas" style="height:600px;"></div>
+            </div>
+        </div>
+    </div>
+
+
     <script type="text/javascript" src="elections.js"></script>
     <script type="text/javascript" src="bureaux.js"></script>
     <script type="text/javascript" src="candidates.js"></script>
