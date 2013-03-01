@@ -1,7 +1,7 @@
 var http = require('http');
 var fs = require('fs');
 var path = require('path');
-var electionData = require('./electionData');
+var electionData = require('./../electionData');
  
 http.createServer(function (request, response) {
  
